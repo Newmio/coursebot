@@ -32,3 +32,19 @@ func (f *FactoryImpl) CreateCommandVault() pkg.CommandVault {
 func (f *FactoryImpl) CreateUser() pkg.User {
 	return core.CreateUser()
 }
+
+func (f *FactoryImpl) CreateCourseVault() pkg.CourseVault {
+	return core.CreateCourseVault()
+}
+
+func (f *FactoryImpl) CreateCourse() pkg.Course {
+	return core.CreateCourse()
+}
+
+func (f *FactoryImpl) CreateRequestManager() pkg.RequestManager {
+	return core.CreateRequestManager()
+}
+
+func (f *FactoryImpl) CreateCourseParser() pkg.CourseParser {
+	return core.CreateCourseParser()	
+}

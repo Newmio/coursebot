@@ -6,4 +6,8 @@ type Factory interface {
 	CreateTGApp() TGApp
 	CreateCommandVault() CommandVault
 	CreateUser() User
+	CreateCourseVault() CourseVault
+	CreateCourse() Course
+	CreateRequestManager() RequestManager
+	CreateCourseParser() CourseParser
 }

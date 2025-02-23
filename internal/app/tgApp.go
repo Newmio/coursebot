@@ -23,7 +23,7 @@ func (obj *TGAppImpl) Run() {
 		panic(err)
 	}
 
-	pkg.BOT.GetBot().Use(obj.ValidateUserMiddleware)
+	pkg.BOT.GetBot().Use(obj.validateUserMiddleware)
 
 	pkg.BOT.GetBot().Handle("/start", obj.start)
 	pkg.BOT.GetBot().Handle(telebot.OnText, obj.HandleText)
@@ -67,5 +67,10 @@ func (obj *TGAppImpl) HandleText(c telebot.Context) error {
 
 	pkg.CMDV.RemoveCommand(c.Sender().ID)
 
-	return nil
+	user, err := pkg.USRV.Get(c.Sender().ID)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return obj.validateUser(user)
 }

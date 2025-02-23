@@ -15,6 +15,7 @@ var (
 )
 
 const (
-	DBName              = "cbot"
-	CollectionUserVault = "users"
+	DBName                = "cbot"
+	CollectionUserVault   = "users"
+	CollectionCourseVault = "courses"
 )
