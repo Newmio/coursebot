@@ -46,5 +46,5 @@ func (f *FactoryImpl) CreateRequestManager() pkg.RequestManager {
 }
 
 func (f *FactoryImpl) CreateCourseParser() pkg.CourseParser {
-	return core.CreateCourseParser()	
+	return core.CreateCourseParser()
 }

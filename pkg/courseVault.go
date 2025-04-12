@@ -1,16 +1,22 @@
 package pkg
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type CourseVault interface {
 	CreateOrUpdate(course Course) error
+	Exists(link string) (bool, error)
+	GetByLink(link string) (Course, error)
+	GetById(id primitive.ObjectID) (Course, error)
 }
 
 type Course interface {
 	GetId() primitive.ObjectID
 	GetName() string
 	GetDescription() string
-	GetCost() int
+	GetCost() string
 	GetDuration() string
 	GetApproved() bool
 	GetLink() string
@@ -18,15 +24,15 @@ type Course interface {
 	SetId(id primitive.ObjectID)
 	SetName(name string)
 	SetDescription(description string)
-	SetCost(cost int)
+	SetCost(cost string)
 	SetDuration(duration string)
 	SetApproved(approved bool)
 	SetLink(link string)
 
 	ToMap() map[string]interface{}
+	ParseBson(bsonM bson.M)
 }
 
-
-type CourseParser interface{
-
+type CourseParser interface {
+	StartParseSite(searchValue string, siteName string) ([]map[string]string, error)
 }

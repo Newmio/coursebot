@@ -15,6 +15,7 @@ func main() {
 	pkg.BOT = pkg.F.CreateBot()
 	pkg.USRV = pkg.F.CreateUserVault()
 	pkg.CMDV = pkg.F.CreateCommandVault()
+	pkg.CRV = pkg.F.CreateCourseVault()
 
 	pkg.F.CreateTGApp().Run()
 }
