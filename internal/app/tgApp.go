@@ -18,15 +18,19 @@ func (obj *TGAppImpl) Run() {
 	if err := pkg.BOT.GetBot().SetCommands([]telebot.Command{
 		{
 			Text:        "/start",
-			Description: "start",
+			Description: "Старт",
 		},
 		{
 			Text:        "/search",
-			Description: "search",
+			Description: "Пошук",
 		},
 		{
 			Text:        "/create_course",
-			Description: "create course",
+			Description: "Створити курс",
+		},
+		{
+			Text:        "/search_green_courses",
+			Description: "Знайти підтверджені курси",
 		},
 	}); err != nil {
 		panic(err)
@@ -37,6 +41,7 @@ func (obj *TGAppImpl) Run() {
 	pkg.BOT.GetBot().Handle("/start", obj.start)
 	pkg.BOT.GetBot().Handle("/search", obj.searchCourseInWeb)
 	pkg.BOT.GetBot().Handle("/create_course", obj.createCourseHandler)
+	pkg.BOT.GetBot().Handle("/search_green_courses", obj.getApprovedCourses)
 	pkg.BOT.GetBot().Handle(telebot.OnText, obj.handleText)
 	pkg.BOT.GetBot().Handle(telebot.OnCallback, obj.handleBtn)
 

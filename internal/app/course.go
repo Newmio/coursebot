@@ -3,11 +3,18 @@ package app
 import (
 	"cbot/pkg"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"gopkg.in/telebot.v4"
 )
+
+func (obj *TGAppImpl) getApprovedCourses(c telebot.Context) error {
+	pkg.CMDV.SetCommand(c.Sender().ID, "get_approved_courses:0")
+	return c.Send("Введіть назву курсу для пошуку")
+}
 
 func (obj *TGAppImpl) searchCourseInWeb(c telebot.Context) error {
 	parser := pkg.F.CreateCourseParser()
@@ -91,23 +98,7 @@ func (obj *TGAppImpl) setCourseApprove(c telebot.Context, id string) error {
 	return c.Send("Підтвердити курс?", inlineMenu)
 }
 
-func (obj *TGAppImpl) genCourseElems(c telebot.Context, link string, idCourse primitive.ObjectID) error {
-	var course pkg.Course
-
-	if !idCourse.IsZero() {
-		if crv, ert := pkg.CRV.GetById(idCourse); ert != nil {
-			return c.Send(pkg.Trace(ert).Error())
-		} else {
-			course = crv
-		}
-	} else if link != "" {
-		if crv, ert := pkg.CRV.GetByLink(link); ert != nil {
-			return c.Send(pkg.Trace(ert).Error())
-		} else {
-			course = crv
-		}
-	}
-
+func getTunerBtns(course pkg.Course) *telebot.ReplyMarkup {
 	id := course.GetId().Hex()
 
 	apprBtn := telebot.Btn{}
@@ -150,47 +141,26 @@ func (obj *TGAppImpl) genCourseElems(c telebot.Context, link string, idCourse pr
 		},
 	}...)
 
-	if course.GetName() == "" {
-		course.SetName("-")
-	}
-
-	if course.GetDescription() == "" {
-		course.SetDescription("-")
-	}
-
-	if course.GetDuration() == "" {
-		course.SetDuration("-")
-	}
-
-	if course.GetLink() == "" {
-		course.SetLink("-")
-	}
-
-	text := fmt.Sprintf("Назва: %s\nОпис: %s\nЦіна: %s\nТривалість: %s\nПосилання: %s",
-		course.GetName(), course.GetDescription(), course.GetCost(), course.GetDuration(), course.GetLink())
-
-	return c.Send(text, inlineMenu)
+	return inlineMenu
 }
 
 func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 	var err error
-	var idStr string
+	var paramStr string
 	var id primitive.ObjectID
-	var needUpdate, needShow bool
+	var needUpdate, needShow, showMany bool
 
 	text := c.Message().Text
 	course := pkg.F.CreateCourse()
 
 	parts := strings.Split(cmd, ":")
 	if len(parts) > 1 {
-		idStr = parts[1]
+		paramStr = parts[1]
 	}
 	cmd = parts[0]
 
-	if idStr != "" {
-		if objId, ert := primitive.ObjectIDFromHex(idStr); ert != nil {
-			return pkg.Trace(ert)
-		} else {
+	if paramStr != "" {
+		if objId, ert := primitive.ObjectIDFromHex(paramStr); ert == nil {
 			id = objId
 		}
 	}
@@ -232,6 +202,7 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 		needShow = true
 
 	case "set_course_duration":
+		course.SetDuration(text)
 		needUpdate = true
 		needShow = true
 
@@ -244,6 +215,10 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 		course.SetApproved(false)
 		needUpdate = true
 		needShow = true
+
+	case "get_approved_courses":
+		course.SetApproved(true)
+		showMany = true
 	}
 
 	if needUpdate {
@@ -253,7 +228,44 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 	}
 
 	if needShow && err == nil {
-		err = obj.genCourseElems(c, course.GetLink(), course.GetId())
+		link := course.GetLink()
+		idCourse := course.GetId()
+
+		if !idCourse.IsZero() {
+			if crv, ert := pkg.CRV.GetById(idCourse); ert != nil {
+				err = pkg.Trace(ert)
+			} else {
+				course = crv
+			}
+		} else if link != "" {
+			if crv, ert := pkg.CRV.GetByLink(link); ert != nil {
+				err = pkg.Trace(ert)
+			} else {
+				course = crv
+			}
+		}
+
+		if err == nil {
+			err = c.Send(course.String(), getTunerBtns(course))
+		}
+	}
+
+	if showMany && err == nil {
+		if skip, ert := strconv.Atoi(paramStr); ert == nil {
+			if courses, ert := pkg.CRV.GetCourses(5, int64(skip), course.GetApproved(), text); ert == nil {
+				for _, v := range courses{
+					if ert = c.Send(v.String(), getTunerBtns(v)); ert != nil {
+						err = pkg.Trace(ert)
+						break
+					}
+					time.Sleep(time.Millisecond * 400)
+				}
+			}else{
+				err = pkg.Trace(ert)
+			}
+		}else{
+			err = pkg.Trace(ert)
+		}
 	}
 
 	if err != nil {

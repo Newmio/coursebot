@@ -29,6 +29,44 @@ func CreateCourseVault() pkg.CourseVault {
 	return obj
 }
 
+func (obj *CourseValultImpl) GetCourses(limit, skip int64, appr bool, search string) ([]pkg.Course, error) {
+	filter := make(bson.M)
+	opts := options.Find().SetLimit(limit).SetSkip(skip)
+
+	if appr {
+		filter["approved"] = true
+	}
+
+	if search != "" {
+		filter["$or"] = []bson.M{
+			{"name": bson.M{"$regex": search, "$options": "i"}},
+			{"description": bson.M{"$regex": search, "$options": "i"}},
+		}
+	}
+
+	courses := make([]pkg.Course, 0)
+	ctx := context.Background()
+
+	cursor, err := obj.mClient.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	for cursor.Next(ctx) {
+		course := &CourseImpl{}
+
+		var resp bson.M
+		if err := cursor.Decode(&resp); err != nil {
+			return nil, pkg.Trace(err)
+		}
+
+		course.ParseBson(resp)
+		courses = append(courses, course)
+	}
+
+	return courses, nil
+}
+
 func (obj *CourseValultImpl) CreateOrUpdate(course pkg.Course) error {
 	var filter bson.M
 
@@ -101,6 +139,27 @@ type CourseImpl struct {
 
 func CreateCourse() pkg.Course {
 	return &CourseImpl{}
+}
+
+func (obj *CourseImpl) String() string {
+	if obj.GetName() == "" {
+		obj.SetName("-")
+	}
+
+	if obj.GetDescription() == "" {
+		obj.SetDescription("-")
+	}
+
+	if obj.GetDuration() == "" {
+		obj.SetDuration("-")
+	}
+
+	if obj.GetLink() == "" {
+		obj.SetLink("-")
+	}
+
+	return fmt.Sprintf("Назва: %s\nОпис: %s\nЦіна: %s\nТривалість: %s\nПосилання: %s",
+		obj.GetName(), obj.GetDescription(), obj.GetCost(), obj.GetDuration(), obj.GetLink())
 }
 
 func (obj *CourseImpl) GetId() primitive.ObjectID {

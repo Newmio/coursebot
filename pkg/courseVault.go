@@ -10,6 +10,7 @@ type CourseVault interface {
 	Exists(link string) (bool, error)
 	GetByLink(link string) (Course, error)
 	GetById(id primitive.ObjectID) (Course, error)
+	GetCourses(limit, skip int64, appr bool, search string) ([]Course, error)
 }
 
 type Course interface {
@@ -31,6 +32,7 @@ type Course interface {
 
 	ToMap() map[string]interface{}
 	ParseBson(bsonM bson.M)
+	String() string
 }
 
 type CourseParser interface {
