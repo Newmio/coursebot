@@ -19,7 +19,7 @@ func (obj *TGAppImpl) validateUserMiddleware(next telebot.HandlerFunc) telebot.H
 
 		if user != nil && strings.HasPrefix(text, "/") {
 			if err := obj.validateUser(user); err != nil {
-				return c.Send(err)
+				return pkg.BOT.Send(c, true, err)
 			}
 		}
 

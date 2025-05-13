@@ -13,7 +13,7 @@ import (
 
 func (obj *TGAppImpl) getApprovedCourses(c telebot.Context) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, "get_approved_courses:0")
-	return c.Send("Введіть назву курсу для пошуку")
+	return pkg.BOT.Send(c, true, "Введіть назву курсу для пошуку")
 }
 
 func (obj *TGAppImpl) searchCourseInWeb(c telebot.Context) error {
@@ -21,7 +21,7 @@ func (obj *TGAppImpl) searchCourseInWeb(c telebot.Context) error {
 
 	courses, err := parser.StartParseSite("js", "prometheus")
 	if err != nil {
-		return c.Send(err.Error())
+		return pkg.BOT.Send(c, false, err.Error())
 	}
 
 	fmt.Println(courses)
@@ -35,27 +35,27 @@ func (obj *TGAppImpl) createCourseHandler(c telebot.Context) error {
 
 func (obj *TGAppImpl) createCourse(c telebot.Context, id string) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("create_course_link:%s", id))
-	return c.Send("Введіть посилання на курс")
+	return pkg.BOT.Send(c, true, "Введіть посилання на курс")
 }
 
 func (obj *TGAppImpl) setCourseName(c telebot.Context, id string) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("set_course_name:%s", id))
-	return c.Send("Введіть ім'я курсу")
+	return pkg.BOT.Send(c, true, "Введіть ім'я курсу")
 }
 
 func (obj *TGAppImpl) setCourseDescription(c telebot.Context, id string) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("set_course_desc:%s", id))
-	return c.Send("Введіть опис курсу")
+	return pkg.BOT.Send(c, true, "Введіть опис курсу")
 }
 
 func (obj *TGAppImpl) setCourseCost(c telebot.Context, id string) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("set_course_cost:%s", id))
-	return c.Send("Введіть ціну курсу")
+	return pkg.BOT.Send(c, true, "Введіть ціну курсу")
 }
 
 func (obj *TGAppImpl) setCourseDuration(c telebot.Context, id string) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("set_course_duration:%s", id))
-	return c.Send("Введіть тривалість курсу")
+	return pkg.BOT.Send(c, true, "Введіть тривалість курсу")
 }
 
 func (obj *TGAppImpl) setCourseLink(c telebot.Context, id string) error {
@@ -77,7 +77,7 @@ func (obj *TGAppImpl) setCourseUnapprove(c telebot.Context, id string) error {
 		},
 	}...)
 
-	return c.Send("Зняти курс з підтвердження?", inlineMenu)
+	return pkg.BOT.Send(c, true, "Зняти курс з підтвердження?", inlineMenu)
 }
 
 func (obj *TGAppImpl) setCourseApprove(c telebot.Context, id string) error {
@@ -95,7 +95,7 @@ func (obj *TGAppImpl) setCourseApprove(c telebot.Context, id string) error {
 		},
 	}...)
 
-	return c.Send("Підтвердити курс?", inlineMenu)
+	return pkg.BOT.Send(c, true, "Підтвердити курс?", inlineMenu)
 }
 
 func getTunerBtns(course pkg.Course) *telebot.ReplyMarkup {
@@ -149,6 +149,8 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 	var paramStr string
 	var id primitive.ObjectID
 	var needUpdate, needShow, showMany bool
+
+	pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
 
 	text := c.Message().Text
 	course := pkg.F.CreateCourse()
@@ -246,24 +248,72 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 		}
 
 		if err == nil {
-			err = c.Send(course.String(), getTunerBtns(course))
+			err = pkg.BOT.Send(c, true, course.String(), getTunerBtns(course))
 		}
 	}
 
 	if showMany && err == nil {
 		if skip, ert := strconv.Atoi(paramStr); ert == nil {
+			if len(parts) > 2 {
+				text = parts[2]
+			}
+
 			if courses, ert := pkg.CRV.GetCourses(5, int64(skip), course.GetApproved(), text); ert == nil {
-				for _, v := range courses{
-					if ert = c.Send(v.String(), getTunerBtns(v)); ert != nil {
+				for _, v := range courses {
+					if ert = pkg.BOT.Send(c, true, v.String(), getTunerBtns(v)); ert != nil {
 						err = pkg.Trace(ert)
 						break
 					}
-					time.Sleep(time.Millisecond * 400)
+					time.Sleep(time.Millisecond * 200)
 				}
-			}else{
+
+				if err == nil {
+					if len(courses) > 0 {
+						skipL := skip - 5
+						skipR := skip + 5
+
+						if skipL < 0 {
+							skipL = 0
+						}
+						inlineMenu := &telebot.ReplyMarkup{}
+						inlineMenu.Inline([]telebot.Row{
+							{
+								telebot.Btn{
+									Text:   "<-",
+									Unique: fmt.Sprintf("get_approved_courses:%d:%s", skipL, text),
+								},
+								telebot.Btn{
+									Text:   "->",
+									Unique: fmt.Sprintf("get_approved_courses:%d:%s", skipR, text),
+								},
+							},
+						}...)
+
+						err = pkg.BOT.Send(c, true, "Iнша сторінка", inlineMenu)
+
+					} else {
+						skipL := skip - 5
+						if skipL < 0 {
+							skipL = 0
+						}
+
+						inlineMenu := &telebot.ReplyMarkup{}
+						inlineMenu.Inline([]telebot.Row{
+							{
+								telebot.Btn{
+									Text:   "<-",
+									Unique: fmt.Sprintf("get_approved_courses:%d:%s", skipL, text),
+								},
+							},
+						}...)
+
+						err = pkg.BOT.Send(c, true, "Курсiв не знайдено\nСпробуйте пошук не пiдтверджених курсiв", inlineMenu)
+					}
+				}
+			} else {
 				err = pkg.Trace(ert)
 			}
-		}else{
+		} else {
 			err = pkg.Trace(ert)
 		}
 	}

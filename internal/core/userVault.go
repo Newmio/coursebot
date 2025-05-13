@@ -81,6 +81,7 @@ type UserImpl struct {
 	mFirstName  string
 	mMiddleName string
 	mLastName   string
+	mIsAdmin    bool
 }
 
 func CreateUser() pkg.User {
@@ -107,6 +108,10 @@ func (obj *UserImpl) GetLastName() string {
 	return obj.mLastName
 }
 
+func (obj *UserImpl) GetIsAdmin() bool {
+	return obj.mIsAdmin
+}
+
 func (obj *UserImpl) SetId(id int64) {
 	obj.mId = id
 }
@@ -125,6 +130,10 @@ func (obj *UserImpl) SetMiddleName(middleName string) {
 
 func (obj *UserImpl) SetLastName(lastName string) {
 	obj.mLastName = lastName
+}
+
+func (obj *UserImpl) SetIsAdmin(isAdmin bool) {
+	obj.mIsAdmin = isAdmin
 }
 
 func (obj *UserImpl) ToMap() map[string]interface{} {
@@ -148,6 +157,10 @@ func (obj *UserImpl) ToMap() map[string]interface{} {
 
 	if obj.mLastName != "" {
 		resp["last_name"] = obj.mLastName
+	}
+
+	if obj.mIsAdmin {
+		resp["is_admin"] = obj.mIsAdmin
 	}
 
 	return resp

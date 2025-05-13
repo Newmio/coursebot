@@ -51,6 +51,8 @@ func (obj *TGAppImpl) Run() {
 func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 	btnName := strings.TrimSpace(c.Callback().Data)
 
+	pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
+
 	switch btnName {
 
 	}
@@ -83,10 +85,13 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 
 		case "set_course_approve", "set_course_unapprove":
 			return obj.handleCourseText(c, btnName)
+
+		case "get_approved_courses":
+			return obj.handleCourseText(c, btnName)
 		}
 	}
 
-	return c.Send("btn not found")
+	return pkg.BOT.Send(c, false, "btn not found")
 }
 
 func (obj *TGAppImpl) handleText(c telebot.Context) error {
