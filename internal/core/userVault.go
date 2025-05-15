@@ -3,6 +3,7 @@ package core
 import (
 	"cbot/pkg"
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -72,6 +73,12 @@ func (obj *UserVaultImpl) Get(userId int64) (pkg.User, error) {
 		}
 	}
 
+	if isAdminIf, ok := resp["is_admin"]; ok {
+		if isAdmin, ok := isAdminIf.(bool); ok {
+			user.SetIsAdmin(isAdmin)
+		}
+	}
+
 	return user, nil
 }
 
@@ -86,6 +93,20 @@ type UserImpl struct {
 
 func CreateUser() pkg.User {
 	return &UserImpl{}
+}
+
+func (obj *UserImpl) String() string {
+	text := fmt.Sprintf("Iм'я: %s\n", obj.GetFirstName())
+	text += fmt.Sprintf("Прізвище: %s\n", obj.GetLastName())
+	text += fmt.Sprintf("Логін: %s\n", obj.GetMiddleName())
+
+	if obj.GetIsAdmin() {
+		text += "Роль: Адміністратор\n"
+	} else {
+		text += "Роль: Студент\n"
+	}
+
+	return text
 }
 
 func (obj *UserImpl) GetId() int64 {
@@ -159,9 +180,7 @@ func (obj *UserImpl) ToMap() map[string]interface{} {
 		resp["last_name"] = obj.mLastName
 	}
 
-	if obj.mIsAdmin {
-		resp["is_admin"] = obj.mIsAdmin
-	}
+	resp["is_admin"] = obj.mIsAdmin
 
 	return resp
 }

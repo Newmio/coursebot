@@ -11,12 +11,15 @@ type User interface {
 	GetFirstName() string 
 	GetMiddleName() string
 	GetLastName() string
+	GetIsAdmin() bool
 
 	SetId(id int64)
 	SetLogin(login string)
 	SetFirstName(firstName string)
 	SetMiddleName(middleName string)
 	SetLastName(lastName string)
+	SetIsAdmin(isAdmin bool)
 
+	String() string
 	ToMap() map[string]interface{}
 }

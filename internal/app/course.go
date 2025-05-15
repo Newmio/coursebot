@@ -98,48 +98,66 @@ func (obj *TGAppImpl) setCourseApprove(c telebot.Context, id string) error {
 	return pkg.BOT.Send(c, true, "Підтвердити курс?", inlineMenu)
 }
 
-func getTunerBtns(course pkg.Course) *telebot.ReplyMarkup {
+func getTunerBtns(course pkg.Course, user pkg.User) *telebot.ReplyMarkup {
 	id := course.GetId().Hex()
-
-	apprBtn := telebot.Btn{}
-	if course.GetApproved() {
-		apprBtn.Text = "Зняти з підтвердження"
-		apprBtn.Unique = fmt.Sprintf("btn_course_unapprove:%s", id)
-	} else {
-		apprBtn.Text = "Підтвердити"
-		apprBtn.Unique = fmt.Sprintf("btn_course_approve:%s", id)
-	}
-
 	inlineMenu := &telebot.ReplyMarkup{}
-	inlineMenu.Inline([]telebot.Row{
-		{
-			telebot.Btn{
-				Text:   "Iм'я",
-				Unique: fmt.Sprintf("btn_course_name:%s", id),
+
+	if user.GetIsAdmin() {
+		apprBtn := telebot.Btn{}
+		if course.GetApproved() {
+			apprBtn.Text = "Зняти з підтвердження"
+			apprBtn.Unique = fmt.Sprintf("btn_course_unapprove:%s", id)
+		} else {
+			apprBtn.Text = "Підтвердити"
+			apprBtn.Unique = fmt.Sprintf("btn_course_approve:%s", id)
+		}
+
+		inlineMenu.Inline([]telebot.Row{
+			{
+				telebot.Btn{
+					Text:   "Iм'я",
+					Unique: fmt.Sprintf("btn_course_name:%s", id),
+				},
+				telebot.Btn{
+					Text:   "Опис",
+					Unique: fmt.Sprintf("btn_course_desc:%s", id),
+				},
+				telebot.Btn{
+					Text:   "Ціна",
+					Unique: fmt.Sprintf("btn_course_cost:%s", id),
+				},
 			},
-			telebot.Btn{
-				Text:   "Опис",
-				Unique: fmt.Sprintf("btn_course_desc:%s", id),
+			{
+				telebot.Btn{
+					Text:   "Тривалість",
+					Unique: fmt.Sprintf("btn_course_duration:%s", id),
+				},
+				telebot.Btn{
+					Text:   "Посилання",
+					Unique: fmt.Sprintf("btn_course_link:%s", id),
+				},
 			},
-			telebot.Btn{
-				Text:   "Ціна",
-				Unique: fmt.Sprintf("btn_course_cost:%s", id),
+			{
+				apprBtn,
 			},
-		},
-		{
-			telebot.Btn{
-				Text:   "Тривалість",
-				Unique: fmt.Sprintf("btn_course_duration:%s", id),
+		}...)
+	}else{
+		btn := telebot.Btn{}
+
+		if course.GetApproved() {
+			btn.Text = "Записатися на курс"
+			btn.Unique = fmt.Sprintf("btn_start_course:%s", id)
+		} else {
+			btn.Text = "Запросити підтвердження"
+			btn.Unique = fmt.Sprintf("btn_send_approve_course:%s", id)
+		}
+
+		inlineMenu.Inline([]telebot.Row{
+			{
+				btn,
 			},
-			telebot.Btn{
-				Text:   "Посилання",
-				Unique: fmt.Sprintf("btn_course_link:%s", id),
-			},
-		},
-		{
-			apprBtn,
-		},
-	}...)
+		}...)
+	}
 
 	return inlineMenu
 }
@@ -248,7 +266,8 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 		}
 
 		if err == nil {
-			err = pkg.BOT.Send(c, true, course.String(), getTunerBtns(course))
+			user := c.Get("user").(pkg.User)
+			err = pkg.BOT.Send(c, true, course.String(), getTunerBtns(course, user))
 		}
 	}
 
@@ -259,8 +278,10 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 			}
 
 			if courses, ert := pkg.CRV.GetCourses(5, int64(skip), course.GetApproved(), text); ert == nil {
+				user := c.Get("user").(pkg.User)
+
 				for _, v := range courses {
-					if ert = pkg.BOT.Send(c, true, v.String(), getTunerBtns(v)); ert != nil {
+					if ert = pkg.BOT.Send(c, true, v.String(), getTunerBtns(v, user)); ert != nil {
 						err = pkg.Trace(ert)
 						break
 					}
@@ -275,6 +296,7 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 						if skipL < 0 {
 							skipL = 0
 						}
+
 						inlineMenu := &telebot.ReplyMarkup{}
 						inlineMenu.Inline([]telebot.Row{
 							{

@@ -21,6 +21,10 @@ func (obj *TGAppImpl) Run() {
 			Description: "Старт",
 		},
 		{
+			Text:        "/profile",
+			Description: "Профіль",
+		},
+		{
 			Text:        "/search",
 			Description: "Пошук",
 		},
@@ -42,6 +46,7 @@ func (obj *TGAppImpl) Run() {
 	pkg.BOT.GetBot().Handle("/search", obj.searchCourseInWeb)
 	pkg.BOT.GetBot().Handle("/create_course", obj.createCourseHandler)
 	pkg.BOT.GetBot().Handle("/search_green_courses", obj.getApprovedCourses)
+	pkg.BOT.GetBot().Handle("/profile", obj.profile)
 	pkg.BOT.GetBot().Handle(telebot.OnText, obj.handleText)
 	pkg.BOT.GetBot().Handle(telebot.OnCallback, obj.handleBtn)
 
