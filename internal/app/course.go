@@ -11,6 +11,74 @@ import (
 	"gopkg.in/telebot.v4"
 )
 
+func (obj *TGAppImpl) sendCourseResult(c telebot.Context) error {
+	pkg.CMDV.SetCommand(c.Sender().ID, "set_course_result")
+	return pkg.BOT.Send(c, false, "Вiдправте пiдтвердження роботи\nФото, файл тощо...")
+}
+
+func (obj *TGAppImpl) myCourses(c telebot.Context) error {
+	user := c.Get("user").(pkg.User)
+
+	courses, err := pkg.CRV.GetMyCourses(user.GetObjectId())
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	var haveOne bool
+
+	for _, v := range courses {
+		if started, err := pkg.CRV.CheckStartedCourse(v.GetId(), user.GetObjectId()); err == nil {
+			if started {
+				if err = pkg.BOT.Send(c, true, v.String(), getTunerBtns(v, user)); err != nil {
+					return pkg.BOT.Send(c, false, err.Error())
+				}
+				haveOne = true
+				time.Sleep(time.Millisecond * 200)
+			}
+		} else {
+			return pkg.BOT.Send(c, false, err.Error())
+		}
+	}
+
+	if !haveOne {
+		return pkg.BOT.Send(c, false, "Ви не записані на жоден курс")
+	}
+
+	return nil
+}
+
+func (obj *TGAppImpl) stopCourse(c telebot.Context, courseIdStr string) error {
+	user := c.Get("user").(pkg.User)
+
+	courseId, err := primitive.ObjectIDFromHex(courseIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	err = pkg.CRV.StopCourse(courseId, user.GetObjectId())
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	return pkg.BOT.Send(c, false, "Ви відписались від курсу")
+}
+
+func (obj *TGAppImpl) startCourse(c telebot.Context, courseIdStr string) error {
+	user := c.Get("user").(pkg.User)
+
+	courseId, err := primitive.ObjectIDFromHex(courseIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	err = pkg.CRV.StartCourse(courseId, user.GetObjectId())
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	return pkg.BOT.Send(c, false, "Ви записались на курс")
+}
+
 func (obj *TGAppImpl) getApprovedCourses(c telebot.Context) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, "get_approved_courses:0")
 	return pkg.BOT.Send(c, true, "Введіть назву курсу для пошуку")
@@ -141,22 +209,31 @@ func getTunerBtns(course pkg.Course, user pkg.User) *telebot.ReplyMarkup {
 				apprBtn,
 			},
 		}...)
-	}else{
+	} else {
+		btns := []telebot.Btn{}
 		btn := telebot.Btn{}
 
 		if course.GetApproved() {
-			btn.Text = "Записатися на курс"
-			btn.Unique = fmt.Sprintf("btn_start_course:%s", id)
+			if started, err := pkg.CRV.CheckStartedCourse(course.GetId(), user.GetObjectId()); err == nil && started {
+				btn.Text = "Вийти з курсу"
+				btn.Unique = fmt.Sprintf("btn_stop_course:%s", id)
+				btns = append(btns, btn)
+
+				btn.Text = "Здати матеріал"
+				btn.Unique = fmt.Sprintf("btn_send_result_course:%s", id)
+				btns = append(btns, btn)
+			} else {
+				btn.Text = "Записатися на курс"
+				btn.Unique = fmt.Sprintf("btn_start_course:%s", id)
+				btns = append(btns, btn)
+			}
 		} else {
 			btn.Text = "Запросити підтвердження"
 			btn.Unique = fmt.Sprintf("btn_send_approve_course:%s", id)
+			btns = append(btns, btn)
 		}
 
-		inlineMenu.Inline([]telebot.Row{
-			{
-				btn,
-			},
-		}...)
+		inlineMenu.Inline([]telebot.Row{btns}...)
 	}
 
 	return inlineMenu

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -41,6 +42,12 @@ func (obj *UserVaultImpl) Get(userId int64) (pkg.User, error) {
 
 	if err := obj.mClient.FindOne(context.Background(), filter).Decode(&resp); err != nil {
 		return nil, pkg.Trace(err)
+	}
+
+	if objIdIf, ok := resp["_id"]; ok {
+		if objId, ok := objIdIf.(primitive.ObjectID); ok {
+			user.SetObjectId(objId)
+		}
 	}
 
 	if idIf, ok := resp["id"]; ok {
@@ -79,16 +86,38 @@ func (obj *UserVaultImpl) Get(userId int64) (pkg.User, error) {
 		}
 	}
 
+	if groupNumIf, ok := resp["group_num"]; ok {
+		if groupNum, ok := groupNumIf.(int); ok {
+			user.GroupNum = groupNum
+		}
+	}
+
+	if proffesionIf, ok := resp["proffesion"]; ok {
+		if proffesion, ok := proffesionIf.(string); ok {
+			user.Proffesion = proffesion
+		}
+	}
+
+	if proffesionNumIf, ok := resp["proffesion_num"]; ok {
+		if proffesionNum, ok := proffesionNumIf.(int); ok {
+			user.ProffesionNum = proffesionNum
+		}
+	}
+
 	return user, nil
 }
 
 type UserImpl struct {
-	mId         int64
-	mLogin      string
-	mFirstName  string
-	mMiddleName string
-	mLastName   string
-	mIsAdmin    bool
+	mObjectId     primitive.ObjectID
+	mId           int64
+	mLogin        string
+	mFirstName    string
+	mMiddleName   string
+	mLastName     string
+	mIsAdmin      bool
+	GroupNum      int
+	Proffesion    string
+	ProffesionNum int
 }
 
 func CreateUser() pkg.User {
@@ -106,7 +135,15 @@ func (obj *UserImpl) String() string {
 		text += "Роль: Студент\n"
 	}
 
+	text += fmt.Sprintf("Курс: %d\n", obj.GroupNum)
+	text += fmt.Sprintf("Професія: %s\n", obj.Proffesion)
+	text += fmt.Sprintf("Номер професії: %d\n", obj.ProffesionNum)
+
 	return text
+}
+
+func (obj *UserImpl) GetObjectId() primitive.ObjectID {
+	return obj.mObjectId
 }
 
 func (obj *UserImpl) GetId() int64 {
@@ -133,6 +170,22 @@ func (obj *UserImpl) GetIsAdmin() bool {
 	return obj.mIsAdmin
 }
 
+func (obj *UserImpl) GetGroupNum() int {
+	return obj.GroupNum
+}
+
+func (obj *UserImpl) GetProffesion() string {
+	return obj.Proffesion
+}
+
+func (obj *UserImpl) GetProffesionNum() int {
+	return obj.ProffesionNum
+}
+
+func (obj *UserImpl) SetObjectId(id primitive.ObjectID) {
+	obj.mObjectId = id
+}
+
 func (obj *UserImpl) SetId(id int64) {
 	obj.mId = id
 }
@@ -157,6 +210,18 @@ func (obj *UserImpl) SetIsAdmin(isAdmin bool) {
 	obj.mIsAdmin = isAdmin
 }
 
+func (obj *UserImpl) SetGroupNum(groupNum int) {
+	obj.GroupNum = groupNum
+}
+
+func (obj *UserImpl) SetProffesion(proffesion string) {
+	obj.Proffesion = proffesion
+}
+
+func (obj *UserImpl) SetProffesionNum(proffesionNum int) {
+	obj.ProffesionNum = proffesionNum
+}
+
 func (obj *UserImpl) ToMap() map[string]interface{} {
 	resp := make(map[string]interface{})
 
@@ -178,6 +243,18 @@ func (obj *UserImpl) ToMap() map[string]interface{} {
 
 	if obj.mLastName != "" {
 		resp["last_name"] = obj.mLastName
+	}
+
+	if obj.GroupNum != 0 {
+		resp["group_num"] = obj.GroupNum
+	}
+
+	if obj.Proffesion != "" {
+		resp["proffesion"] = obj.Proffesion
+	}
+
+	if obj.ProffesionNum != 0 {
+		resp["proffesion_num"] = obj.ProffesionNum
 	}
 
 	resp["is_admin"] = obj.mIsAdmin

@@ -32,7 +32,7 @@ func (obj *TGAppImpl) profile(c telebot.Context) error {
 	user := c.Get("user").(pkg.User)
 
 	inlineMenu := &telebot.ReplyMarkup{}
-	inlineMenu.Inline([]telebot.Row{
+	rows := []telebot.Row{
 		{
 			telebot.Btn{
 				Text:   "Iм'я",
@@ -47,13 +47,33 @@ func (obj *TGAppImpl) profile(c telebot.Context) error {
 				Unique: "set_middle_name",
 			},
 		},
-		{
-			telebot.Btn{
-				Text:   "Група",
-				Unique: "btn_set_group",
+	}
+
+	if user.GetIsAdmin(){
+		rows = append(rows, []telebot.Row{
+			{
+				telebot.Btn{
+					Text:   "Група",
+					Unique: "btn_set_group",
+				},
+				telebot.Btn{
+					Text:   "Група",
+					Unique: "btn_set_group_num",
+				},
 			},
-		},
-	}...)
+			{
+				telebot.Btn{
+					Text:   "Професія",
+					Unique: "btn_set_proffesion",
+				},
+				telebot.Btn{
+					Text:   "Номер професіі",
+					Unique: "btn_set_proffesion_num",
+				},
+			},
+		}...)
+	}
+	inlineMenu.Inline(rows...)
 
 	return pkg.BOT.Send(c, true, user.String(), inlineMenu)
 }

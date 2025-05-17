@@ -20,13 +20,119 @@ import (
 )
 
 type CourseValultImpl struct {
-	mClient *mongo.Collection
+	mClient      *mongo.Collection
+	mUserCourses *mongo.Collection
 }
 
 func CreateCourseVault() pkg.CourseVault {
 	obj := &CourseValultImpl{}
 	obj.mClient = pkg.GetMongoCollection(pkg.DBName, pkg.CollectionCourseVault)
+	obj.mUserCourses = pkg.GetMongoCollection(pkg.DBName, pkg.CollectionUserCoursesVault)
 	return obj
+}
+
+func (obj *CourseValultImpl) CheckStartedCourse(courseId, userId primitive.ObjectID) (bool, error) {
+	filter := bson.M{"course_id": courseId, "user_id": userId, "start": true, "stop": false}
+	count, err := obj.mUserCourses.CountDocuments(context.Background(), filter)
+	if err != nil {
+		return false, pkg.Trace(err)
+	}
+
+	return count > 0, nil
+}
+
+func (obj *CourseValultImpl) GetMyCourses(userId primitive.ObjectID) ([]pkg.Course, error) {
+	filter := bson.M{"user_id": userId}
+	opts := options.Find()
+
+	ctx := context.Background()
+
+	cursor, err := obj.mUserCourses.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	var courseIds []primitive.ObjectID
+
+	for cursor.Next(ctx) {
+		var resp bson.M
+
+		if err := cursor.Decode(&resp); err != nil {
+			return nil, pkg.Trace(err)
+		}
+
+		if courseIdIf, ok := resp["course_id"]; ok {
+			if courseId, ok := courseIdIf.(primitive.ObjectID); ok {
+				courseIds = append(courseIds, courseId)
+			}
+		}
+	}
+
+	filter = bson.M{"_id": bson.M{"$in": courseIds}}
+	opts = options.Find()
+
+	cursor, err = obj.mClient.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	var courses []pkg.Course
+
+	for cursor.Next(ctx) {
+		course := &CourseImpl{}
+
+		var resp bson.M
+		if err := cursor.Decode(&resp); err != nil {
+			return nil, pkg.Trace(err)
+		}
+
+		course.ParseBson(resp)
+		courses = append(courses, course)
+	}
+
+	return courses, nil
+}
+
+func (obj *CourseValultImpl) StartCourse(courseId, userId primitive.ObjectID) error {
+	setMap := bson.M{
+		"course_id":  courseId,
+		"user_id":    userId,
+		"start":      true,
+		"stop":       false,
+		"time_start": time.Now().UTC(),
+	}
+
+	opts := options.Update().SetUpsert(true)
+	update := bson.M{"$set": setMap}
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+
+	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update, opts)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return nil
+}
+
+func (obj *CourseValultImpl) StopCourse(courseId, userId primitive.ObjectID) error {
+	setMap := bson.M{
+		"course_id": courseId,
+		"user_id":   userId,
+		"start":     false,
+		"stop":      true,
+		"time_stop": time.Now().UTC(),
+	}
+
+	opts := options.Update()
+	update := bson.M{"$set": setMap}
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+
+	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update, opts)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return nil
 }
 
 func (obj *CourseValultImpl) GetCourses(limit, skip int64, appr bool, search string) ([]pkg.Course, error) {

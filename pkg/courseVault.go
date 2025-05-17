@@ -11,6 +11,10 @@ type CourseVault interface {
 	GetByLink(link string) (Course, error)
 	GetById(id primitive.ObjectID) (Course, error)
 	GetCourses(limit, skip int64, appr bool, search string) ([]Course, error)
+	StartCourse(courseId, userId primitive.ObjectID) error
+	StopCourse(courseId, userId primitive.ObjectID) error
+	GetMyCourses(userId primitive.ObjectID) ([]Course, error)
+	CheckStartedCourse(courseId, userId primitive.ObjectID) (bool, error)
 }
 
 type Course interface {

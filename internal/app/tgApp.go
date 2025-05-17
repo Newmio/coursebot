@@ -21,8 +21,16 @@ func (obj *TGAppImpl) Run() {
 			Description: "Старт",
 		},
 		{
+			Text:        "/menu",
+			Description: "Меню",
+		},
+		{
 			Text:        "/profile",
 			Description: "Профіль",
+		},
+		{
+			Text:        "/my_courses",
+			Description: "Мої курси",
 		},
 		{
 			Text:        "/search",
@@ -47,6 +55,8 @@ func (obj *TGAppImpl) Run() {
 	pkg.BOT.GetBot().Handle("/create_course", obj.createCourseHandler)
 	pkg.BOT.GetBot().Handle("/search_green_courses", obj.getApprovedCourses)
 	pkg.BOT.GetBot().Handle("/profile", obj.profile)
+	pkg.BOT.GetBot().Handle("/my_courses", obj.myCourses)
+	pkg.BOT.GetBot().Handle("/menu", obj.menu)
 	pkg.BOT.GetBot().Handle(telebot.OnText, obj.handleText)
 	pkg.BOT.GetBot().Handle(telebot.OnCallback, obj.handleBtn)
 
@@ -88,11 +98,18 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 		case "btn_course_approve":
 			return obj.setCourseApprove(c, btnId[1])
 
+		case "btn_start_course":
+			return obj.startCourse(c, btnId[1])
+
+		case "btn_stop_course":
+			return obj.stopCourse(c, btnId[1])
+
 		case "set_course_approve", "set_course_unapprove":
 			return obj.handleCourseText(c, btnName)
 
 		case "get_approved_courses":
 			return obj.handleCourseText(c, btnName)
+
 		}
 	}
 
@@ -129,6 +146,9 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 			err = fmt.Errorf("error cast user")
 		}
 
+	case "set_course_result":
+		err = obj.courseResultFileHandler(c)
+
 	default:
 		if strings.Contains(cmd, "course") {
 			err = obj.handleCourseText(c, cmd)
@@ -147,4 +167,8 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 	}
 
 	return obj.validateUser(user)
+}
+
+func (obj *TGAppImpl) menu(c telebot.Context) error {
+	return nil
 }
