@@ -11,8 +11,8 @@ import (
 	"gopkg.in/telebot.v4"
 )
 
-func (obj *TGAppImpl) sendCourseResult(c telebot.Context) error {
-	pkg.CMDV.SetCommand(c.Sender().ID, "set_course_result")
+func (obj *TGAppImpl) sendCourseResult(c telebot.Context, id string) error {
+	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("set_course_result:%s", id))
 	return pkg.BOT.Send(c, false, "Вiдправте пiдтвердження роботи\nФото, файл тощо...")
 }
 
@@ -316,6 +316,9 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 	case "get_approved_courses":
 		course.SetApproved(true)
 		showMany = true
+
+	case "set_course_result":
+		return obj.courseResultFileHandler(c, id)
 	}
 
 	if needUpdate {

@@ -10,4 +10,5 @@ type Factory interface {
 	CreateCourse() Course
 	CreateRequestManager() RequestManager
 	CreateCourseParser() CourseParser
+	CreateFileVault() FileVault
 }

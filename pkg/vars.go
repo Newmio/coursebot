@@ -11,6 +11,8 @@ var (
 	BOT  Bot
 	CMDV CommandVault
 
+	FLV FileVault
+
 	BotToken  string
 	MongoHost string
 

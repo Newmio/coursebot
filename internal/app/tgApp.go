@@ -59,6 +59,8 @@ func (obj *TGAppImpl) Run() {
 	pkg.BOT.GetBot().Handle("/menu", obj.menu)
 	pkg.BOT.GetBot().Handle(telebot.OnText, obj.handleText)
 	pkg.BOT.GetBot().Handle(telebot.OnCallback, obj.handleBtn)
+	pkg.BOT.GetBot().Handle(telebot.OnDocument, obj.handleText)
+	pkg.BOT.GetBot().Handle(telebot.OnPhoto, obj.handleText)
 
 	pkg.BOT.GetBot().Start()
 }
@@ -110,6 +112,8 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 		case "get_approved_courses":
 			return obj.handleCourseText(c, btnName)
 
+		case "btn_send_result_course":
+			return obj.sendCourseResult(c, btnId[1])
 		}
 	}
 
@@ -145,9 +149,6 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 		} else {
 			err = fmt.Errorf("error cast user")
 		}
-
-	case "set_course_result":
-		err = obj.courseResultFileHandler(c)
 
 	default:
 		if strings.Contains(cmd, "course") {

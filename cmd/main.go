@@ -16,6 +16,7 @@ func main() {
 	pkg.USRV = pkg.F.CreateUserVault()
 	pkg.CMDV = pkg.F.CreateCommandVault()
 	pkg.CRV = pkg.F.CreateCourseVault()
+	pkg.FLV = pkg.F.CreateFileVault()
 
 	pkg.F.CreateTGApp().Run()
 }

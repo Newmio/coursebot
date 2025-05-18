@@ -48,3 +48,7 @@ func (f *FactoryImpl) CreateRequestManager() pkg.RequestManager {
 func (f *FactoryImpl) CreateCourseParser() pkg.CourseParser {
 	return core.CreateCourseParser()
 }
+
+func (f *FactoryImpl) CreateFileVault() pkg.FileVault{
+	return core.CreateFileVault()
+}
