@@ -245,8 +245,6 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 	var id primitive.ObjectID
 	var needUpdate, needShow, showMany bool
 
-	pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
-
 	text := c.Message().Text
 	course := pkg.F.CreateCourse()
 

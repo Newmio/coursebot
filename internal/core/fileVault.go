@@ -43,3 +43,7 @@ func (obj *FileVaultImpl) Get(name string) (*os.File, error) {
 func (obj *FileVaultImpl) GetDir(name string) string {
 	return obj.mDir + name
 }
+
+func (obj *FileVaultImpl) Delete(name string) error {
+	return os.Remove(obj.mDir + name)
+}

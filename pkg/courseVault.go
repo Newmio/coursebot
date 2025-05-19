@@ -16,6 +16,7 @@ type CourseVault interface {
 	GetMyCourses(userId primitive.ObjectID) ([]Course, error)
 	CheckStartedCourse(courseId, userId primitive.ObjectID) (bool, error)
 	SetResultFile(courseId, userId primitive.ObjectID, fileName string)error
+	DeleteResultFile(courseId, userId primitive.ObjectID, fileName string) error
 }
 
 type Course interface {

@@ -31,7 +31,19 @@ func CreateCourseVault() pkg.CourseVault {
 	return obj
 }
 
-func (obj *CourseValultImpl) SetResultFile(courseId, userId primitive.ObjectID, fileName string)error{
+func (obj *CourseValultImpl) DeleteResultFile(courseId, userId primitive.ObjectID, fileName string) error {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+	update := bson.M{"$pull": bson.M{"files": fileName}}
+
+	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return nil
+}
+
+func (obj *CourseValultImpl) SetResultFile(courseId, userId primitive.ObjectID, fileName string) error {
 	filter := bson.M{"course_id": courseId, "user_id": userId}
 	update := bson.M{"$push": bson.M{"files": fileName}}
 

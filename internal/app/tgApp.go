@@ -68,8 +68,6 @@ func (obj *TGAppImpl) Run() {
 func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 	btnName := strings.TrimSpace(c.Callback().Data)
 
-	pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
-
 	switch btnName {
 
 	}
@@ -78,6 +76,8 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 
 	if len(btnId) > 1 {
 		switch btnId[0] {
+		case "btn_clear_msg":
+			//TODO
 
 		case "btn_course_name":
 			return obj.setCourseName(c, btnId[1])
@@ -124,6 +124,7 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 	var err error
 	text := c.Message().Text
 	cmd := pkg.CMDV.GetCommand(c.Sender().ID)
+	pkg.CMDV.RemoveCommand(c.Sender().ID)
 
 	switch cmd {
 	case "set_first_name":
@@ -159,8 +160,6 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 	if err != nil {
 		return pkg.Trace(err)
 	}
-
-	pkg.CMDV.RemoveCommand(c.Sender().ID)
 
 	user, err := pkg.USRV.Get(c.Sender().ID)
 	if err != nil {

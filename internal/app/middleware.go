@@ -24,6 +24,7 @@ func (obj *TGAppImpl) validateUserMiddleware(next telebot.HandlerFunc) telebot.H
 		}
 
 		c.Set("user", user)
+		pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
 		return next(c)
 	}
 }
