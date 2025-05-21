@@ -17,6 +17,11 @@ type CourseVault interface {
 	CheckStartedCourse(courseId, userId primitive.ObjectID) (bool, error)
 	SetResultFile(courseId, userId primitive.ObjectID, fileName string)error
 	DeleteResultFile(courseId, userId primitive.ObjectID, fileName string) error
+	GetFullFileName(courseId, userId primitive.ObjectID, filename string) (string, error)
+	UpdateCheckAdmin(courseId primitive.ObjectID, userId primitive.ObjectID, flag bool) error
+	SetCoins(courseId, userId primitive.ObjectID, coins int) error
+	GetCoins(courseId, userId primitive.ObjectID) ([]int, error)
+	SetResultCoins(courseId, userId primitive.ObjectID, coins int) error
 }
 
 type Course interface {

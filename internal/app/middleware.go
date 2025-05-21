@@ -10,16 +10,16 @@ import (
 
 func (obj *TGAppImpl) validateUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {
 	return func(c telebot.Context) error {
+		text := c.Message().Text
+
 		user, err := pkg.USRV.Get(c.Sender().ID)
-		if err != nil {
+		if err != nil && !strings.HasPrefix(text, "start") {
 			return pkg.Trace(err)
 		}
 
-		text := c.Message().Text
-
 		if user != nil && strings.HasPrefix(text, "/") {
 			if err := obj.validateUser(user); err != nil {
-				return pkg.BOT.Send(c, true, err)
+				return pkg.BOT.Send(c, true, err.Error())
 			}
 		}
 

@@ -31,6 +31,89 @@ func CreateCourseVault() pkg.CourseVault {
 	return obj
 }
 
+func (obj *CourseValultImpl) SetResultCoins(courseId, userId primitive.ObjectID, coins int) error {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+	update := bson.M{"$set": bson.M{"result_coins": coins, "coins": bson.A{}}}
+
+	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return nil
+}
+
+func (obj *CourseValultImpl) GetCoins(courseId, userId primitive.ObjectID) ([]int, error) {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+
+	var resp bson.M
+
+	if err := obj.mUserCourses.FindOne(context.Background(), filter).Decode(&resp); err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	var coins []int
+
+	if valIf, ok := resp["coins"]; ok {
+		if valSl, ok := valIf.(primitive.A); ok {
+			for _, v := range valSl {
+				if val, ok := v.(int32); ok {
+					coins = append(coins, int(val))
+				}
+			}
+		}
+	}
+
+	return coins, nil
+}
+
+func (obj *CourseValultImpl) SetCoins(courseId, userId primitive.ObjectID, coins int) error {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+	update := bson.M{"$push": bson.M{"coins": coins}}
+
+	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return nil
+}
+
+func (obj *CourseValultImpl) UpdateCheckAdmin(courseId primitive.ObjectID, userId primitive.ObjectID, flag bool) error {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+	update := bson.M{"$set": bson.M{"check_admin": true}}
+
+	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	return nil
+}
+
+func (obj *CourseValultImpl) GetFullFileName(courseId, userId primitive.ObjectID, filename string) (string, error) {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+
+	var resp bson.M
+
+	if err := obj.mUserCourses.FindOne(context.Background(), filter).Decode(&resp); err != nil {
+		return "", pkg.Trace(err)
+	}
+
+	if valIf, ok := resp["files"]; ok {
+		if val, ok := valIf.(primitive.A); ok {
+			for _, v := range val {
+				str := v.(string)
+				if strings.Contains(str, filename) {
+					return str, nil
+				}
+			}
+		}
+	}
+
+	return "", nil
+}
+
 func (obj *CourseValultImpl) DeleteResultFile(courseId, userId primitive.ObjectID, fileName string) error {
 	filter := bson.M{"course_id": courseId, "user_id": userId}
 	update := bson.M{"$pull": bson.M{"files": fileName}}
@@ -90,6 +173,10 @@ func (obj *CourseValultImpl) GetMyCourses(userId primitive.ObjectID) ([]pkg.Cour
 				courseIds = append(courseIds, courseId)
 			}
 		}
+	}
+
+	if len(courseIds) == 0 {
+		return nil, nil
 	}
 
 	filter = bson.M{"_id": bson.M{"$in": courseIds}}

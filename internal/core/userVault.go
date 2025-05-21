@@ -34,6 +34,89 @@ func (obj *UserVaultImpl) CreateOrUpdate(user pkg.User) error {
 	return nil
 }
 
+func (obj *UserVaultImpl) GetAdmins() ([]pkg.User, error) {
+	filter := bson.M{"is_admin": true}
+	cursor, err := obj.mClient.Find(context.Background(), filter)
+	if err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	var resp bson.M
+	users := make([]pkg.User, 0)
+
+	for cursor.Next(context.Background()) {
+		user := &UserImpl{}
+
+		if err := cursor.Decode(&resp); err != nil {
+			return nil, pkg.Trace(err)
+		}
+
+		if objIdIf, ok := resp["_id"]; ok {
+			if objId, ok := objIdIf.(primitive.ObjectID); ok {
+				user.SetObjectId(objId)
+			}
+		}
+
+		if idIf, ok := resp["id"]; ok {
+			if id, ok := idIf.(int64); ok {
+				user.SetId(id)
+			}
+		}
+
+		if loginIf, ok := resp["login"]; ok {
+			if login, ok := loginIf.(string); ok {
+				user.SetLogin(login)
+			}
+		}
+
+		if firstNameIf, ok := resp["first_name"]; ok {
+			if firstName, ok := firstNameIf.(string); ok {
+				user.SetFirstName(firstName)
+			}
+		}
+
+		if middleNameIf, ok := resp["middle_name"]; ok {
+			if middleName, ok := middleNameIf.(string); ok {
+				user.SetMiddleName(middleName)
+			}
+		}
+
+		if lastNameIf, ok := resp["last_name"]; ok {
+			if lastName, ok := lastNameIf.(string); ok {
+				user.SetLastName(lastName)
+			}
+		}
+
+		if isAdminIf, ok := resp["is_admin"]; ok {
+			if isAdmin, ok := isAdminIf.(bool); ok {
+				user.SetIsAdmin(isAdmin)
+			}
+		}
+
+		if groupNumIf, ok := resp["group_num"]; ok {
+			if groupNum, ok := groupNumIf.(int); ok {
+				user.GroupNum = groupNum
+			}
+		}
+
+		if proffesionIf, ok := resp["proffesion"]; ok {
+			if proffesion, ok := proffesionIf.(string); ok {
+				user.Proffesion = proffesion
+			}
+		}
+
+		if proffesionNumIf, ok := resp["proffesion_num"]; ok {
+			if proffesionNum, ok := proffesionNumIf.(int); ok {
+				user.ProffesionNum = proffesionNum
+			}
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
 func (obj *UserVaultImpl) Get(userId int64) (pkg.User, error) {
 	filter := bson.M{"id": userId}
 	user := &UserImpl{}

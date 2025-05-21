@@ -19,11 +19,16 @@ func (obj *TGAppImpl) deleteFilesByCourse(c telebot.Context, courseIdStr, fileNa
 		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
 	}
 
-	if err := pkg.CRV.DeleteResultFile(courseId, user.GetObjectId(), fileName); err != nil {
+	fullFileName, err := pkg.CRV.GetFullFileName(courseId, user.GetObjectId(), fileName)
+	if err != nil {
 		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
 	}
 
-	if err := pkg.FLV.Delete(fileName); err != nil {
+	if err := pkg.CRV.DeleteResultFile(courseId, user.GetObjectId(), fullFileName); err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	if err := pkg.FLV.Delete(fullFileName); err != nil {
 		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
 	}
 
@@ -101,12 +106,6 @@ func (obj *TGAppImpl) courseResultFileHandler(c telebot.Context, courseId primit
 			telebot.Btn{
 				Text:   "Вiдправити результати",
 				Unique: fmt.Sprintf("btn_complete_send_result_course:%s", idStr),
-			},
-		},
-		{
-			telebot.Btn{
-				Text:   "Видалити файли",
-				Unique: fmt.Sprintf("btn_delete_course_files:%s", idStr),
 			},
 		},
 	}...)

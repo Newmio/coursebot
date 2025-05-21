@@ -5,6 +5,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 type UserVault interface {
 	CreateOrUpdate(user User) error
 	Get(userId int64) (User, error)
+	GetAdmins() ([]User, error)
 }
 
 type User interface {

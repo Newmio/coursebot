@@ -114,6 +114,15 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 
 		case "btn_send_result_course":
 			return obj.sendCourseResult(c, btnId[1])
+
+		case "btn_delete_course_file":
+			return obj.deleteFilesByCourse(c, btnId[1], btnId[2])
+
+		case "btn_complete_send_result_course":
+			return obj.sendCheckResultToAdmin(c, btnId[1])
+
+		case "btn_sendcoin":
+			return obj.sendCourseCoins(c, btnId[1], btnId[2])
 		}
 	}
 
@@ -152,7 +161,8 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 		}
 
 	default:
-		if strings.Contains(cmd, "course") {
+		if strings.Contains(cmd, "course") ||
+			strings.Contains(cmd, "set_sendcoin") {
 			err = obj.handleCourseText(c, cmd)
 		}
 	}

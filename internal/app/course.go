@@ -11,6 +11,51 @@ import (
 	"gopkg.in/telebot.v4"
 )
 
+func (obj *TGAppImpl) sendCheckResultToAdmin(c telebot.Context, courseIdStr string) error {
+	user := c.Get("user").(pkg.User)
+
+	courseId, err := primitive.ObjectIDFromHex(courseIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	if err := pkg.CRV.UpdateCheckAdmin(courseId, user.GetObjectId(), true); err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	admins, err := pkg.USRV.GetAdmins()
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	course, err := pkg.CRV.GetById(courseId)
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	for _, admin := range admins {
+		text := fmt.Sprintf("Вам надiслан курс на перевiрку\nВiд %s %s %s\n", user.GetLastName(), user.GetFirstName(), user.GetMiddleName())
+		//text += fmt.Sprintf("Группа - %s", user.GetGr)
+		text += fmt.Sprintf("Назва курсу: %s\n", course.GetName())
+
+		inlineMenu := &telebot.ReplyMarkup{}
+		inlineMenu.Inline([]telebot.Row{
+			{
+				telebot.Btn{
+					Text:   "Виставити оцінку",
+					Unique: fmt.Sprintf("btn_sendcoin:%s:%s", courseIdStr, user.GetObjectId().Hex()),
+				},
+			},
+		}...)
+
+		if _, err := pkg.BOT.GetBot().Send(telebot.ChatID(admin.GetId()), text, inlineMenu); err != nil {
+			return pkg.BOT.Send(c, false, err.Error())
+		}
+	}
+
+	return pkg.BOT.Send(c, false, "Результат вiдправлено адмiнiстратору")
+}
+
 func (obj *TGAppImpl) sendCourseResult(c telebot.Context, id string) error {
 	pkg.CMDV.SetCommand(c.Sender().ID, fmt.Sprintf("set_course_result:%s", id))
 	return pkg.BOT.Send(c, false, "Вiдправте пiдтвердження роботи\nФото, файл тощо...")
@@ -317,6 +362,9 @@ func (obj *TGAppImpl) handleCourseText(c telebot.Context, cmd string) error {
 
 	case "set_course_result":
 		return obj.courseResultFileHandler(c, id)
+
+	case "set_sendcoin":
+		return obj.setCourseCoins(c, parts[1], parts[2])
 	}
 
 	if needUpdate {
