@@ -22,6 +22,8 @@ type CourseVault interface {
 	SetCoins(courseId, userId primitive.ObjectID, coins int) error
 	GetCoins(courseId, userId primitive.ObjectID) ([]int, error)
 	SetResultCoins(courseId, userId primitive.ObjectID, coins int) error
+	GetUserCourse(courseId, userId primitive.ObjectID) (bson.M, error)
+	GetCompletedCourses(userId primitive.ObjectID) ([]bson.M, error)
 }
 
 type Course interface {

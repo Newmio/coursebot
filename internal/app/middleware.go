@@ -10,22 +10,57 @@ import (
 
 func (obj *TGAppImpl) validateUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {
 	return func(c telebot.Context) error {
-		text := c.Message().Text
 
 		user, err := pkg.USRV.Get(c.Sender().ID)
-		if err != nil && !strings.HasPrefix(text, "start") {
-			return pkg.Trace(err)
+		if err != nil {
+			return obj.start(c)
+		} else {
+			c.Set("user", user)
 		}
 
-		if user != nil && strings.HasPrefix(text, "/") {
+		cmd := pkg.CMDV.GetCommand(c.Sender().ID)
+
+		if user != nil &&
+			!strings.Contains(cmd, "set_first_name") &&
+			!strings.Contains(cmd, "set_last_name") &&
+			!strings.Contains(cmd, "set_middle_name") {
 			if err := obj.validateUser(user); err != nil {
 				return pkg.BOT.Send(c, true, err.Error())
 			}
 		}
 
-		c.Set("user", user)
-		pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
-		return next(c)
+		needClear := true
+
+		if c.Callback() != nil {
+			msg := c.Callback().Message
+			markup := msg.ReplyMarkup
+
+			if markup != nil {
+
+				for _, row := range markup.InlineKeyboard {
+					for _, btn := range row {
+						if strings.Contains(btn.Data, "btn_clear_msg") {
+							needClear = false
+						}
+					}
+				}
+			}
+		}
+
+		if needClear {
+			pkg.CMDV.ClearAllDeleteMessages(c.Sender().ID)
+		}
+
+		if err := next(c); err == nil {
+			user := c.Get("user").(pkg.User)
+			
+			if err := obj.validateUser(user); err != nil {
+				return pkg.BOT.Send(c, true, err.Error())
+			}
+			return nil
+		}else{
+			return err
+		}
 	}
 }
 

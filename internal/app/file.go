@@ -11,6 +11,72 @@ import (
 	"gopkg.in/telebot.v4"
 )
 
+func (obj *TGAppImpl) getCourseFiles(c telebot.Context, courseIdStr, userIdStr string) error {
+	courseId, err := primitive.ObjectIDFromHex(courseIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	userId, err := primitive.ObjectIDFromHex(userIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	courseInfo, err := pkg.CRV.GetUserCourse(courseId, userId)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	if len(courseInfo) > 0 {
+		if filesIf, ok := courseInfo["files"]; ok {
+			if files, ok := filesIf.(primitive.A); ok && len(files) > 0 {
+				for _, v := range files {
+					if str, ok := v.(string); ok {
+
+						file, err := pkg.FLV.Get(str)
+						if err != nil {
+							return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+						}
+						defer file.Close()
+
+						inlineMenu := &telebot.ReplyMarkup{}
+						inlineMenu.Inline([]telebot.Row{
+							{
+								telebot.Btn{
+									Text:   "Так",
+									Unique: fmt.Sprintf("btn_d_c_f:%s:%s", courseIdStr, strings.Split(str, ".")[0]),
+								},
+								telebot.Btn{
+									Text:   "Ні",
+									Unique: "btn_clear_msg",
+								},
+							},
+						}...)
+
+						if strings.Contains(str, "jpg") {
+							photo := &telebot.Photo{File: telebot.FromReader(file), Caption: "Видалити файл?"}
+							if err := pkg.BOT.Send(c, true, photo, inlineMenu); err != nil {
+								return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+							}
+						} else {
+							document := &telebot.Document{File: telebot.FromReader(file), Caption: "Видалити файл?"}
+							if err := pkg.BOT.Send(c, true, document, inlineMenu); err != nil {
+								return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+							}
+						}
+
+						file.Close()
+					}
+				}
+			} else {
+				return pkg.BOT.Send(c, true, "Файли відсутні")
+			}
+		}
+	}
+
+	return nil
+}
+
 func (obj *TGAppImpl) deleteFilesByCourse(c telebot.Context, courseIdStr, fileName string) error {
 	user := c.Get("user").(pkg.User)
 
@@ -74,7 +140,7 @@ func (obj *TGAppImpl) courseResultFileHandler(c telebot.Context, courseId primit
 		{
 			telebot.Btn{
 				Text:   "Так",
-				Unique: fmt.Sprintf("btn_delete_course_file:%s:%s", idStr, strings.Split(fileName, ".")[0]),
+				Unique: fmt.Sprintf("btn_d_c_f:%s:%s", idStr, strings.Split(fileName, ".")[0]),
 			},
 			telebot.Btn{
 				Text:   "Ні",

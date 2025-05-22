@@ -31,6 +31,35 @@ func CreateCourseVault() pkg.CourseVault {
 	return obj
 }
 
+func (obj *CourseValultImpl) GetCompletedCourses(userId primitive.ObjectID) ([]bson.M, error) {
+	filter := bson.M{"user_id": userId, "result_coins": bson.M{"$gt": 0}}
+
+	var resp []bson.M
+
+	cursor, err := obj.mUserCourses.Find(context.Background(), filter)
+	if err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	if err := cursor.All(context.Background(), &resp); err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	return resp, nil
+}
+
+func (obj *CourseValultImpl) GetUserCourse(courseId, userId primitive.ObjectID) (bson.M, error) {
+	filter := bson.M{"course_id": courseId, "user_id": userId}
+
+	var resp bson.M
+
+	if err := obj.mUserCourses.FindOne(context.Background(), filter).Decode(&resp); err != nil {
+		return nil, pkg.Trace(err)
+	}
+
+	return resp, nil
+}
+
 func (obj *CourseValultImpl) SetResultCoins(courseId, userId primitive.ObjectID, coins int) error {
 	filter := bson.M{"course_id": courseId, "user_id": userId}
 	update := bson.M{"$set": bson.M{"result_coins": coins, "coins": bson.A{}}}
@@ -81,7 +110,7 @@ func (obj *CourseValultImpl) SetCoins(courseId, userId primitive.ObjectID, coins
 
 func (obj *CourseValultImpl) UpdateCheckAdmin(courseId primitive.ObjectID, userId primitive.ObjectID, flag bool) error {
 	filter := bson.M{"course_id": courseId, "user_id": userId}
-	update := bson.M{"$set": bson.M{"check_admin": true}}
+	update := bson.M{"$set": bson.M{"check_admin": flag}}
 
 	_, err := obj.mUserCourses.UpdateOne(context.Background(), filter, update)
 	if err != nil {
@@ -365,6 +394,8 @@ func (obj *CourseImpl) String() string {
 
 	if obj.GetDescription() == "" {
 		obj.SetDescription("-")
+	} else {
+		obj.SetDescription(string([]rune(obj.GetDescription())[:64]) + "...")
 	}
 
 	if obj.GetDuration() == "" {
@@ -375,7 +406,11 @@ func (obj *CourseImpl) String() string {
 		obj.SetLink("-")
 	}
 
-	return fmt.Sprintf("Назва: %s\nОпис: %s\nЦіна: %s\nТривалість: %s\nПосилання: %s",
+	if obj.GetCost() == "" {
+		obj.SetCost("-")
+	}
+
+	return fmt.Sprintf("🔠Назва: %s\n\n❌\n%s\n❌\n\n💲Ціна: %s\n\n⌛Тривалість: %s\n\n🔗Посилання: %s",
 		obj.GetName(), obj.GetDescription(), obj.GetCost(), obj.GetDuration(), obj.GetLink())
 }
 

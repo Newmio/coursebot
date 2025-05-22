@@ -11,6 +11,77 @@ import (
 	"gopkg.in/telebot.v4"
 )
 
+func (obj *TGAppImpl) getCourse(c telebot.Context, courseIdStr string) error {
+	user := c.Get("user").(pkg.User)
+
+	courseId, err := primitive.ObjectIDFromHex(courseIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	course, err := pkg.CRV.GetById(courseId)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	return pkg.BOT.Send(c, true, course.String(), getTunerBtns(course, user))
+}
+
+func (obj *TGAppImpl) getCourseDescription(c telebot.Context, courseIdStr string) error {
+	courseId, err := primitive.ObjectIDFromHex(courseIdStr)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	course, err := pkg.CRV.GetById(courseId)
+	if err != nil {
+		return pkg.BOT.Send(c, false, pkg.Trace(err).Error())
+	}
+
+	inlineMenu := &telebot.ReplyMarkup{}
+	inlineMenu.Inline([]telebot.Row{
+		{
+			telebot.Btn{
+				Text:   "<-",
+				Unique: fmt.Sprintf("btn_get_course:%s", courseIdStr),
+			},
+		},
+	}...)
+
+	return pkg.BOT.Send(c, true, course.GetDescription(), inlineMenu)
+}
+
+func (obj *TGAppImpl) getCompletedCourses(c telebot.Context) error {
+	user := c.Get("user").(pkg.User)
+
+	coursesInfo, err := pkg.CRV.GetCompletedCourses(user.GetObjectId())
+	if err != nil {
+		return pkg.BOT.Send(c, false, err.Error())
+	}
+
+	if len(coursesInfo) == 0 {
+		return pkg.BOT.Send(c, true, "Зараз ви не завершили жоден курс")
+	}
+
+	for _, value := range coursesInfo {
+		if courseIdIf, ok := value["course_id"]; ok {
+			if courseId, ok := courseIdIf.(primitive.ObjectID); ok {
+				course, err := pkg.CRV.GetById(courseId)
+				if err != nil {
+					return pkg.BOT.Send(c, false, err.Error())
+				}
+
+				if err := pkg.BOT.Send(c, true, course.String(), getTunerBtns(course, user)); err != nil {
+					return pkg.BOT.Send(c, false, err.Error())
+				}
+				time.Sleep(time.Millisecond * 200)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (obj *TGAppImpl) sendCheckResultToAdmin(c telebot.Context, courseIdStr string) error {
 	user := c.Get("user").(pkg.User)
 
@@ -255,19 +326,40 @@ func getTunerBtns(course pkg.Course, user pkg.User) *telebot.ReplyMarkup {
 			},
 		}...)
 	} else {
+		var filesBtn bool
 		btns := []telebot.Btn{}
 		btn := telebot.Btn{}
 
+		courseInfo, _ := pkg.CRV.GetUserCourse(course.GetId(), user.GetObjectId())
+
+		if len(courseInfo) > 0 {
+			if filesIf, ok := courseInfo["files"]; ok {
+				if files, ok := filesIf.(primitive.A); ok {
+					if len(files) > 0 {
+						filesBtn = true
+					}
+
+					if coinsIf, ok := courseInfo["result_coins"]; ok {
+						if coins, ok := coinsIf.(int32); ok && coins > 0 {
+							filesBtn = true
+						}
+					}
+				}
+			}
+		}
+
 		if course.GetApproved() {
 			if started, err := pkg.CRV.CheckStartedCourse(course.GetId(), user.GetObjectId()); err == nil && started {
-				btn.Text = "Вийти з курсу"
-				btn.Unique = fmt.Sprintf("btn_stop_course:%s", id)
-				btns = append(btns, btn)
+				if !filesBtn {
+					btn.Text = "Вийти з курсу"
+					btn.Unique = fmt.Sprintf("btn_stop_course:%s", id)
+					btns = append(btns, btn)
 
-				btn.Text = "Здати матеріал"
-				btn.Unique = fmt.Sprintf("btn_send_result_course:%s", id)
-				btns = append(btns, btn)
-			} else {
+					btn.Text = "Здати матеріал"
+					btn.Unique = fmt.Sprintf("btn_send_result_course:%s", id)
+					btns = append(btns, btn)
+				}
+			} else if !filesBtn {
 				btn.Text = "Записатися на курс"
 				btn.Unique = fmt.Sprintf("btn_start_course:%s", id)
 				btns = append(btns, btn)
@@ -278,7 +370,21 @@ func getTunerBtns(course pkg.Course, user pkg.User) *telebot.ReplyMarkup {
 			btns = append(btns, btn)
 		}
 
-		inlineMenu.Inline([]telebot.Row{btns}...)
+		if filesBtn {
+			btn.Text = "Файли"
+			btn.Unique = fmt.Sprintf("btn_c_f:%s:%s", id, courseInfo["user_id"].(primitive.ObjectID).Hex())
+			btns = append(btns, btn)
+		}
+
+		inlineMenu.Inline([]telebot.Row{
+			{
+				telebot.Btn{
+					Text:   "Опис",
+					Unique: fmt.Sprintf("btn_get_course_desc:%s", id),
+				},
+			},
+			btns,
+		}...)
 	}
 
 	return inlineMenu

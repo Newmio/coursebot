@@ -33,6 +33,10 @@ func (obj *TGAppImpl) Run() {
 			Description: "Мої курси",
 		},
 		{
+			Text:        "/completed",
+			Description: "Завершені курси",
+		},
+		{
 			Text:        "/search",
 			Description: "Пошук",
 		},
@@ -57,6 +61,7 @@ func (obj *TGAppImpl) Run() {
 	pkg.BOT.GetBot().Handle("/profile", obj.profile)
 	pkg.BOT.GetBot().Handle("/my_courses", obj.myCourses)
 	pkg.BOT.GetBot().Handle("/menu", obj.menu)
+	pkg.BOT.GetBot().Handle("/completed", obj.getCompletedCourses)
 	pkg.BOT.GetBot().Handle(telebot.OnText, obj.handleText)
 	pkg.BOT.GetBot().Handle(telebot.OnCallback, obj.handleBtn)
 	pkg.BOT.GetBot().Handle(telebot.OnDocument, obj.handleText)
@@ -69,15 +74,34 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 	btnName := strings.TrimSpace(c.Callback().Data)
 
 	switch btnName {
+	case "btn_profile":
+		return obj.profile(c)
 
+	case "btn_my_courses":
+		return obj.myCourses(c)
+
+	case "btn_completed":
+		return obj.getCompletedCourses(c)
+
+	case "btn_search_green_courses":
+		return obj.getApprovedCourses(c)
+
+	case "btn_create_course":
+		return obj.createCourseHandler(c)
+
+	case "btn_search_red_courses":
+		//TODO
+
+	case "btn_clear_msg":
+		msg := c.Callback().Message
+
+		return pkg.BOT.GetBot().Delete(msg)
 	}
 
 	btnId := strings.Split(btnName, ":")
 
 	if len(btnId) > 1 {
 		switch btnId[0] {
-		case "btn_clear_msg":
-			//TODO
 
 		case "btn_course_name":
 			return obj.setCourseName(c, btnId[1])
@@ -115,7 +139,7 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 		case "btn_send_result_course":
 			return obj.sendCourseResult(c, btnId[1])
 
-		case "btn_delete_course_file":
+		case "btn_d_c_f":
 			return obj.deleteFilesByCourse(c, btnId[1], btnId[2])
 
 		case "btn_complete_send_result_course":
@@ -123,6 +147,15 @@ func (obj *TGAppImpl) handleBtn(c telebot.Context) error {
 
 		case "btn_sendcoin":
 			return obj.sendCourseCoins(c, btnId[1], btnId[2])
+
+		case "btn_c_f":
+			return obj.getCourseFiles(c, btnId[1], btnId[2])
+
+		case "btn_get_course":
+			return obj.getCourse(c, btnId[1])
+
+		case "btn_get_course_desc":
+			return obj.getCourseDescription(c, btnId[1])
 		}
 	}
 
@@ -176,9 +209,75 @@ func (obj *TGAppImpl) handleText(c telebot.Context) error {
 		return pkg.Trace(err)
 	}
 
-	return obj.validateUser(user)
+	c.Set("user", user)
+
+	return nil
 }
 
 func (obj *TGAppImpl) menu(c telebot.Context) error {
-	return nil
+	user := c.Get("user").(pkg.User)
+	inlineMenu := &telebot.ReplyMarkup{}
+
+	if user.GetIsAdmin() {
+		inlineMenu.Inline([]telebot.Row{
+			{
+				telebot.Btn{
+					Text:   "🖥️Профіль🖥️",
+					Unique: "btn_profile",
+				},
+			},
+			{
+				telebot.Btn{
+					Text:   "🔨Створити курс🔨",
+					Unique: "btn_create_course",
+				},
+			},
+			{
+				telebot.Btn{
+					Text:   "🟢Знайти підтверджені курси🟢",
+					Unique: "btn_search_green_courses",
+				},
+			},
+			{
+				telebot.Btn{
+					Text:   "🔴Знайти не підтверджені курси🔴",
+					Unique: "btn_search_red_courses",
+				},
+			},
+		}...)
+
+	} else {
+		inlineMenu.Inline([]telebot.Row{
+			{
+				telebot.Btn{
+					Text:   "🖥️Профіль🖥️",
+					Unique: "btn_profile",
+				},
+				telebot.Btn{
+					Text:   "🔄Мої курси🔄",
+					Unique: "btn_my_courses",
+				},
+			},
+			{
+				telebot.Btn{
+					Text:   "✔️Завершені курси✔️",
+					Unique: "btn_completed",
+				},
+			},
+			{
+				telebot.Btn{
+					Text:   "🟢Знайти підтверджені курси🟢",
+					Unique: "btn_search_green_courses",
+				},
+			},
+			{
+				telebot.Btn{
+					Text:   "🔴Знайти не підтверджені курси🔴",
+					Unique: "btn_search_red_courses",
+				},
+			},
+		}...)
+	}
+
+	return pkg.BOT.Send(c, true, "💎Меню💎", inlineMenu)
 }

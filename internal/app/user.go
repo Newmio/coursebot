@@ -66,7 +66,7 @@ func (obj *TGAppImpl) setCourseCoins(c telebot.Context, courseIdStr, userIdStr s
 		}
 	}
 
-	return pkg.BOT.Send(c, false, fmt.Sprintf("Кiнцевий бал (%d) успішно встановлено", resultCoin))
+	return pkg.BOT.Send(c, false, fmt.Sprintf("Кiнцевиий бал (%d) успішно встановлено", resultCoin))
 }
 
 func (obj *TGAppImpl) sendCourseCoins(c telebot.Context, courseIdStr, userIdStr string) error {
@@ -98,7 +98,14 @@ func (obj *TGAppImpl) start(c telebot.Context) error {
 		return pkg.Trace(err)
 	}
 
-	return nil
+	user, err = pkg.USRV.Get(sender.ID)
+	if err != nil {
+		return pkg.Trace(err)
+	}
+
+	c.Set("user", user)
+
+	return obj.menu(c)
 }
 
 func (obj *TGAppImpl) profile(c telebot.Context) error {
